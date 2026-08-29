@@ -609,7 +609,30 @@ button { font-family: var(--font); cursor: pointer; border: none; background: no
 <!-- 토스트 -->
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
+<!-- 로딩 오버레이 -->
+<div id="loadingOverlay" style="
+  position:fixed;inset:0;background:var(--bg);
+  display:flex;align-items:center;justify-content:center;
+  z-index:9999;flex-direction:column;gap:12px;">
+  <svg width="36" height="36" viewBox="0 0 24 24" fill="none"
+    stroke="#1D9BF0" stroke-width="2" stroke-linecap="round"
+    style="animation:spin 1s linear infinite">
+    <circle cx="12" cy="12" r="10" stroke-opacity=".25"/>
+    <path d="M12 2a10 10 0 0 1 10 10" stroke-opacity="1"/>
+  </svg>
+  <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+  <span style="font-size:13px;color:var(--sub)">데이터 불러오는 중…</span>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script>
+/* ===================================================
+   Supabase 클라이언트
+=================================================== */
+const SUPABASE_URL = 'https://czrdvknzbkmryvnjyiki.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_3o2UdKajFhneYSYvOqOLoA_8Kl2Wt3o';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
 /* ===================================================
    스토리지
 =================================================== */
@@ -658,6 +681,30 @@ function loadCfg() {
 function saveCfg() {
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(cfg)); }
   catch { showToast('저장에 실패했습니다.'); }
+}
+
+/* ===================================================
+   Supabase 헬퍼
+=================================================== */
+async function sbSetConfig(key, value) {
+  const { error } = await sb.from('config').upsert({ key, value }, { onConflict: 'key' });
+  if (error) showToast('저장 오류: ' + error.message);
+  return !error;
+}
+
+async function sbSaveLink(link, sortOrder) {
+  const { error } = await sb.from('links').upsert(
+    { id: String(link.id), cat: link.cat, name: link.name, url: link.url, status: link.status, sort_order: sortOrder },
+    { onConflict: 'id' }
+  );
+  if (error) showToast('저장 오류: ' + error.message);
+  return !error;
+}
+
+async function sbDeleteLink(id) {
+  const { error } = await sb.from('links').delete().eq('id', String(id));
+  if (error) showToast('삭제 오류: ' + error.message);
+  return !error;
 }
 
 /* ===================================================
@@ -929,10 +976,11 @@ function renderSettings() {
 /* ===================================================
    설정 저장 함수들
 =================================================== */
-function saveOrgName() {
+async function saveOrgName() {
   const v = document.getElementById('sOrgName').value.trim();
   if (!v) { showToast('기관명을 입력해주세요.'); return; }
   cfg.orgName = v; saveCfg();
+  await sbSetConfig('orgName', v);
   showToast('기관명이 저장되었습니다.');
 }
 
@@ -965,10 +1013,9 @@ function uploadBgLogo(input) {
   reader.readAsDataURL(file);
 }
 
-function applyFont(fontId) {
+async function applyFont(fontId) {
   const font = FONTS.find(f => f.id === fontId);
   if (!font) return;
-  // Montserrat + Noto Sans KR은 이미 정적 링크로 로드됨
   if (fontId !== 'Montserrat' && fontId !== 'Noto Sans KR') {
     let link = document.getElementById('dynFont');
     if (!link) {
@@ -982,8 +1029,8 @@ function applyFont(fontId) {
     '--font', `'${fontId}', 'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif`
   );
   cfg.fontKey = fontId; saveCfg();
+  await sbSetConfig('fontKey', fontId);
   showToast(`${font.label} 폰트가 적용되었습니다.`);
-  // 설정 탭 선택 상태 갱신
   document.querySelectorAll('.font-card').forEach(c =>
     c.classList.toggle('selected', c.dataset.font === fontId)
   );
@@ -994,7 +1041,7 @@ function removeBgLogo() {
   renderPortal(); renderSettings(); showToast('배경 이미지가 삭제되었습니다.');
 }
 
-function changePw() {
+async function changePw() {
   const cur  = document.getElementById('sCurPw').value;
   const nw   = document.getElementById('sNewPw').value;
   const nw2  = document.getElementById('sNewPw2').value;
@@ -1002,6 +1049,7 @@ function changePw() {
   if (!nw) { showToast('새 비밀번호를 입력해주세요.'); return; }
   if (nw !== nw2) { showToast('새 비밀번호가 일치하지 않습니다.'); return; }
   cfg.adminPw = nw; saveCfg();
+  await sbSetConfig('adminPw', nw);
   ['sCurPw','sNewPw','sNewPw2'].forEach(id => document.getElementById(id).value = '');
   showToast('비밀번호가 변경되었습니다.');
 }
@@ -1039,7 +1087,7 @@ function refreshCatList() {
 
 function closeLinkModal() { closeModal('linkModal'); editingId = null; }
 
-function saveLink(e) {
+async function saveLink(e) {
   e.preventDefault();
   const cat    = document.getElementById('lCat').value.trim();
   const name   = document.getElementById('lName').value.trim();
@@ -1050,11 +1098,16 @@ function saveLink(e) {
   if (!name) { showToast('서비스 이름을 입력해주세요.'); return; }
 
   if (editingId) {
-    const idx = cfg.links.findIndex(l => l.id === editingId);
-    if (idx > -1) cfg.links[idx] = { ...cfg.links[idx], cat, name, url, status };
+    const idx = cfg.links.findIndex(l => String(l.id) === String(editingId));
+    if (idx > -1) {
+      cfg.links[idx] = { ...cfg.links[idx], cat, name, url, status };
+      await sbSaveLink(cfg.links[idx], idx);
+    }
     showToast('링크가 수정되었습니다.');
   } else {
-    cfg.links.push({ id: 'u' + Date.now(), cat, name, url, status });
+    const newLink = { id: 'u' + Date.now(), cat, name, url, status };
+    cfg.links.push(newLink);
+    await sbSaveLink(newLink, cfg.links.length - 1);
     showToast('링크가 추가되었습니다.');
   }
   saveCfg(); closeLinkModal(); renderLinkMgr();
@@ -1064,7 +1117,7 @@ function saveLink(e) {
    링크 삭제
 =================================================== */
 function openDelConfirm(id) {
-  const link = cfg.links.find(l => l.id === id);
+  const link = cfg.links.find(l => String(l.id) === String(id));
   if (!link) return;
   deletingId = id;
   document.getElementById('confirmMsg').textContent = `"${link.name}"을(를) 삭제합니다. 되돌릴 수 없습니다.`;
@@ -1073,9 +1126,10 @@ function openDelConfirm(id) {
 
 function closeConfirm() { closeModal('confirmModal'); deletingId = null; }
 
-function doDelete() {
+async function doDelete() {
   if (!deletingId) return;
-  cfg.links = cfg.links.filter(l => l.id !== deletingId);
+  await sbDeleteLink(deletingId);
+  cfg.links = cfg.links.filter(l => String(l.id) !== String(deletingId));
   saveCfg(); closeConfirm(); renderLinkMgr();
   showToast('링크가 삭제되었습니다.');
 }
@@ -1122,10 +1176,31 @@ function showToast(msg, ms = 2800) {
 }
 
 /* ===================================================
-   초기화
+   초기화 (Supabase → localStorage fallback)
 =================================================== */
-// 저장된 폰트 복원
-if (cfg.fontKey && cfg.fontKey !== 'Montserrat') applyFont(cfg.fontKey);
+async function initApp() {
+  try {
+    const [{ data: configRows, error: ce }, { data: links, error: le }] = await Promise.all([
+      sb.from('config').select('*'),
+      sb.from('links').select('*').order('sort_order'),
+    ]);
+    if (!ce && configRows) {
+      configRows.forEach(({ key, value }) => {
+        if (key === 'orgName') cfg.orgName = value;
+        if (key === 'adminPw') cfg.adminPw = value;
+        if (key === 'fontKey') cfg.fontKey = value;
+      });
+    }
+    if (!le && links && links.length > 0) cfg.links = links;
+    saveCfg();
+  } catch (e) {
+    console.warn('Supabase 연결 실패 — 로컬 캐시 사용:', e.message);
+    showToast('오프라인 모드: 로컬 저장 데이터를 사용합니다.');
+  }
+  document.getElementById('loadingOverlay').style.display = 'none';
+  if (cfg.fontKey && cfg.fontKey !== 'Montserrat') await applyFont(cfg.fontKey);
+  renderPortal();
+}
 
-renderPortal();
+initApp();
 </script>
