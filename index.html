@@ -996,16 +996,20 @@ function uploadLogo(input) {
   if (!file) return;
   if (file.size > 1024 * 1024) { showToast('이미지가 1MB를 초과합니다.'); return; }
   const reader = new FileReader();
-  reader.onload = e => {
+  reader.onload = async e => {
     cfg.logo = e.target.result; saveCfg();
-    renderSettings(); showToast('로고가 저장되었습니다.');
+    renderSettings();
+    await sbSetConfig('headerLogo', cfg.logo);
+    showToast('로고가 저장되었습니다.');
   };
   reader.readAsDataURL(file);
 }
 
-function removeLogo() {
+async function removeLogo() {
   cfg.logo = null; saveCfg();
-  renderSettings(); showToast('로고가 삭제되었습니다.');
+  renderSettings();
+  await sbSetConfig('headerLogo', '');
+  showToast('로고가 삭제되었습니다.');
 }
 
 function uploadBgLogo(input) {
@@ -1013,9 +1017,11 @@ function uploadBgLogo(input) {
   if (!file) return;
   if (file.size > 2 * 1024 * 1024) { showToast('이미지가 2MB를 초과합니다.'); return; }
   const reader = new FileReader();
-  reader.onload = e => {
+  reader.onload = async e => {
     cfg.bgLogo = e.target.result; saveCfg();
-    renderPortal(); renderSettings(); showToast('배경 이미지가 저장되었습니다.');
+    renderPortal(); renderSettings();
+    await sbSetConfig('bgLogo', cfg.bgLogo);
+    showToast('배경 이미지가 저장되었습니다.');
   };
   reader.readAsDataURL(file);
 }
@@ -1043,9 +1049,11 @@ async function applyFont(fontId) {
   );
 }
 
-function removeBgLogo() {
+async function removeBgLogo() {
   cfg.bgLogo = null; saveCfg();
-  renderPortal(); renderSettings(); showToast('배경 이미지가 삭제되었습니다.');
+  renderPortal(); renderSettings();
+  await sbSetConfig('bgLogo', '');
+  showToast('배경 이미지가 삭제되었습니다.');
 }
 
 async function changePw() {
@@ -1192,9 +1200,11 @@ async function initApp() {
     const { config, links } = await res.json();
     if (config) {
       config.forEach(({ key, value }) => {
-        if (key === 'orgName') cfg.orgName = value;
-        if (key === 'adminPw') cfg.adminPw = value;
-        if (key === 'fontKey') cfg.fontKey = value;
+        if (key === 'orgName')    cfg.orgName = value;
+        if (key === 'adminPw')    cfg.adminPw = value;
+        if (key === 'fontKey')    cfg.fontKey = value;
+        if (key === 'headerLogo') cfg.logo    = value || null;
+        if (key === 'bgLogo')     cfg.bgLogo  = value || null;
       });
     }
     if (links && links.length > 0) cfg.links = links;
