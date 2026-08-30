@@ -185,16 +185,18 @@ button { font-family: var(--font); cursor: pointer; border: none; background: no
 .portal-bg-logo {
   position: fixed;
   inset: 0; z-index: 0;
-  background-repeat: repeat;
-  background-size: 42vw 42vw;
-  opacity: .13;
-  mix-blend-mode: multiply;
   pointer-events: none; user-select: none;
+  overflow: hidden;
+}
+.portal-bg-logo img {
+  position: absolute;
+  object-fit: contain;
+  mix-blend-mode: multiply;
 }
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .portal-bg-logo { mix-blend-mode: normal; opacity: .06; }
+  :root:not([data-theme="light"]) .portal-bg-logo img { mix-blend-mode: normal; }
 }
-:root[data-theme="dark"] .portal-bg-logo { mix-blend-mode: normal; opacity: .06; }
+:root[data-theme="dark"] .portal-bg-logo img { mix-blend-mode: normal; }
 .page-title {
   font-size: 22px; font-weight: 700; color: var(--text);
   margin-bottom: 32px; letter-spacing: -.035em;
@@ -745,22 +747,7 @@ function renderPortal() {
     document.getElementById('logoBadge').textContent = cfg.orgName.slice(0, 2);
   }
 
-  // 배경 워터마크 — 바둑판 타일 반복
-  const existingWm = document.getElementById('portalBgLogo');
-  if (cfg.bgLogo) {
-    if (existingWm) {
-      existingWm.style.backgroundImage = `url(${cfg.bgLogo})`;
-    } else {
-      const wm = document.createElement('div');
-      wm.id = 'portalBgLogo';
-      wm.className = 'portal-bg-logo';
-      wm.style.backgroundImage = `url(${cfg.bgLogo})`;
-      wm.setAttribute('aria-hidden', 'true');
-      document.body.appendChild(wm);
-    }
-  } else if (existingWm) {
-    existingWm.remove();
-  }
+  applyBgLogo(cfg.bgLogo);
 
   // 링크 테이블
   const groups  = toGroups(cfg.links);
@@ -1052,6 +1039,34 @@ async function removeBgLogo() {
   renderPortal(); renderSettings();
   await sbSetConfig('bgLogo', '');
   showToast('배경 이미지가 삭제되었습니다.');
+}
+
+function applyBgLogo(src) {
+  let wm = document.getElementById('portalBgLogo');
+  if (!src) { if (wm) wm.remove(); return; }
+  if (!wm) {
+    wm = document.createElement('div');
+    wm.id = 'portalBgLogo';
+    wm.className = 'portal-bg-logo';
+    wm.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(wm);
+  }
+  wm.innerHTML = '';
+  // 대형 1개 중앙 + 소형 4개 모서리 배치
+  // { l: left%, t: top%, w: 너비vw, op: opacity, tx: transform translate }
+  const spots = [
+    { l: 50, t: 50, w: 34, op: .14, tx: '-50%,-50%' },  // 대형 — 중앙
+    { l:  6, t:  6, w: 12, op: .07, tx: '0,0'        },  // 소형 — 좌상
+    { l: 82, t:  5, w: 11, op: .06, tx: '-50%,0'     },  // 소형 — 우상
+    { l:  5, t: 72, w: 12, op: .07, tx: '0,-50%'     },  // 소형 — 좌하
+    { l: 84, t: 72, w: 11, op: .06, tx: '-50%,-50%'  },  // 소형 — 우하
+  ];
+  spots.forEach(s => {
+    const img = document.createElement('img');
+    img.src = src; img.alt = '';
+    img.style.cssText = `left:${s.l}%;top:${s.t}%;width:${s.w}vw;opacity:${s.op};transform:translate(${s.tx});`;
+    wm.appendChild(img);
+  });
 }
 
 async function changePw() {
