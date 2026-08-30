@@ -967,10 +967,7 @@ function renderSettings() {
             <label class="form-label">크기</label>
             <select class="form-select" id="sCatSize" onchange="saveColStyle('catSize',this.value)">
               <option value="">기본값</option>
-              <option value="11px" ${cfg.catSize==='11px'?'selected':''}>소 (11px)</option>
-              <option value="13px" ${cfg.catSize==='13px'?'selected':''}>중 (13px)</option>
-              <option value="15px" ${cfg.catSize==='15px'?'selected':''}>대 (15px)</option>
-              <option value="18px" ${cfg.catSize==='18px'?'selected':''}>특대 (18px)</option>
+              ${['10px','11px','12px','13px','14px','15px','16px','17px','18px','20px','22px','24px'].map(s=>`<option value="${s}" ${cfg.catSize===s?'selected':''}>${s}</option>`).join('')}
             </select>
           </div>
         </div>
@@ -987,10 +984,7 @@ function renderSettings() {
             <label class="form-label">크기</label>
             <select class="form-select" id="sLinkSize" onchange="saveColStyle('linkSize',this.value)">
               <option value="">기본값</option>
-              <option value="11px" ${cfg.linkSize==='11px'?'selected':''}>소 (11px)</option>
-              <option value="13px" ${cfg.linkSize==='13px'?'selected':''}>중 (13px)</option>
-              <option value="15px" ${cfg.linkSize==='15px'?'selected':''}>대 (15px)</option>
-              <option value="18px" ${cfg.linkSize==='18px'?'selected':''}>특대 (18px)</option>
+              ${['10px','11px','12px','13px','14px','15px','16px','17px','18px','20px','22px','24px'].map(s=>`<option value="${s}" ${cfg.linkSize===s?'selected':''}>${s}</option>`).join('')}
             </select>
           </div>
         </div>
