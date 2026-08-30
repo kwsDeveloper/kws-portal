@@ -183,17 +183,18 @@ button { font-family: var(--font); cursor: pointer; border: none; background: no
   position: relative; overflow: hidden;
 }
 .portal-bg-logo {
-  position: absolute;
-  bottom: 0; right: -24px;
-  width: 55%; max-width: 420px;
-  opacity: .2;
+  position: fixed;
+  inset: 0; z-index: 0;
+  background-repeat: repeat;
+  background-size: 200px 200px;
+  opacity: .13;
   mix-blend-mode: multiply;
-  pointer-events: none; user-select: none; display: block;
+  pointer-events: none; user-select: none;
 }
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .portal-bg-logo { mix-blend-mode: normal; opacity: .08; }
+  :root:not([data-theme="light"]) .portal-bg-logo { mix-blend-mode: normal; opacity: .06; }
 }
-:root[data-theme="dark"] .portal-bg-logo { mix-blend-mode: normal; opacity: .08; }
+:root[data-theme="dark"] .portal-bg-logo { mix-blend-mode: normal; opacity: .06; }
 .page-title {
   font-size: 22px; font-weight: 700; color: var(--text);
   margin-bottom: 32px; letter-spacing: -.035em;
@@ -744,19 +745,18 @@ function renderPortal() {
     document.getElementById('logoBadge').textContent = cfg.orgName.slice(0, 2);
   }
 
-  // 배경 워터마크 (헤더 로고와 별도)
+  // 배경 워터마크 — 바둑판 타일 반복
   const existingWm = document.getElementById('portalBgLogo');
   if (cfg.bgLogo) {
     if (existingWm) {
-      existingWm.src = cfg.bgLogo;
+      existingWm.style.backgroundImage = `url(${cfg.bgLogo})`;
     } else {
-      const wm = document.createElement('img');
+      const wm = document.createElement('div');
       wm.id = 'portalBgLogo';
       wm.className = 'portal-bg-logo';
-      wm.src = cfg.bgLogo;
-      wm.alt = '';
+      wm.style.backgroundImage = `url(${cfg.bgLogo})`;
       wm.setAttribute('aria-hidden', 'true');
-      document.querySelector('.portal-main').appendChild(wm);
+      document.body.appendChild(wm);
     }
   } else if (existingWm) {
     existingWm.remove();
@@ -943,12 +943,10 @@ function renderSettings() {
     <!-- 배경 워터마크 로고 -->
     <div class="settings-card">
       <h3 class="settings-card-title">배경 워터마크 이미지</h3>
-      <div class="logo-header-preview" style="justify-content:center;min-height:90px">
-        ${cfg.bgLogo
-          ? `<img src="${cfg.bgLogo}" alt="배경 로고" style="max-height:70px;max-width:260px;object-fit:contain;opacity:.45;mix-blend-mode:multiply">`
-          : `<span style="font-size:12px;color:rgba(255,255,255,.5)">업로드 후 미리보기</span>`}
+      <div style="height:90px;border-radius:8px;overflow:hidden;margin-bottom:4px;position:relative;background:var(--surface-raised);${cfg.bgLogo ? `background-image:url(${cfg.bgLogo});background-repeat:repeat;background-size:70px 70px;opacity:.6;` : ''}display:flex;align-items:center;justify-content:center;">
+        ${cfg.bgLogo ? '' : `<span style="font-size:12px;color:var(--sub)">업로드 후 미리보기</span>`}
       </div>
-      <p class="settings-hint" style="margin-bottom:14px">↑ 실제 포털 배경에 반투명하게 표시됩니다 (헤더 로고와 별도)</p>
+      <p class="settings-hint" style="margin-bottom:14px">↑ 바둑판 형태로 반복 표시됩니다 (헤더 로고와 별도)</p>
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
         <label class="btn btn-sm btn-outline" style="cursor:pointer">
           이미지 선택
