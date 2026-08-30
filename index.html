@@ -626,11 +626,10 @@ button { font-family: var(--font); cursor: pointer; border: none; background: no
 
 <script>
 /* ===================================================
-   Supabase REST API (직접 fetch, apikey 헤더만 사용)
+   Supabase Edge Function API
 =================================================== */
-const SUPABASE_URL = 'https://czrdvknzbkmryvnjyiki.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_3o2UdKajFhneYSYvOqOLoA_8Kl2Wt3o';
-const SB_HEADERS = { 'apikey': SUPABASE_KEY, 'Content-Type': 'application/json', 'Accept': 'application/json' };
+const PORTAL_API = 'https://czrdvknzbkmryvnjyiki.supabase.co/functions/v1/portal-api';
+const SB_HEADERS = { 'Content-Type': 'application/json' };
 
 /* ===================================================
    스토리지
@@ -683,14 +682,12 @@ function saveCfg() {
 }
 
 /* ===================================================
-   Supabase 헬퍼 (직접 fetch)
+   Supabase Edge Function 헬퍼
 =================================================== */
 async function sbSetConfig(key, value) {
   try {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/config`, {
-      method: 'POST',
-      headers: { ...SB_HEADERS, 'Prefer': 'resolution=merge-duplicates,return=minimal' },
-      body: JSON.stringify({ key, value })
+    const res = await fetch(`${PORTAL_API}?action=setConfig`, {
+      method: 'POST', headers: SB_HEADERS, body: JSON.stringify({ key, value })
     });
     if (!res.ok) { showToast('저장 오류: ' + res.status); return false; }
     return true;
@@ -699,10 +696,8 @@ async function sbSetConfig(key, value) {
 
 async function sbSaveLink(link, sortOrder) {
   try {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/links`, {
-      method: 'POST',
-      headers: { ...SB_HEADERS, 'Prefer': 'resolution=merge-duplicates,return=minimal' },
-      body: JSON.stringify({ id: String(link.id), cat: link.cat, name: link.name, url: link.url, status: link.status, sort_order: sortOrder })
+    const res = await fetch(`${PORTAL_API}?action=saveLink`, {
+      method: 'POST', headers: SB_HEADERS, body: JSON.stringify({ link, sortOrder })
     });
     if (!res.ok) { showToast('저장 오류: ' + res.status); return false; }
     return true;
@@ -711,8 +706,8 @@ async function sbSaveLink(link, sortOrder) {
 
 async function sbDeleteLink(id) {
   try {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/links?id=eq.${encodeURIComponent(String(id))}`, {
-      method: 'DELETE', headers: SB_HEADERS
+    const res = await fetch(`${PORTAL_API}?action=deleteLink`, {
+      method: 'POST', headers: SB_HEADERS, body: JSON.stringify({ id: String(id) })
     });
     if (!res.ok) { showToast('삭제 오류: ' + res.status); return false; }
     return true;
@@ -1192,23 +1187,17 @@ function showToast(msg, ms = 2800) {
 =================================================== */
 async function initApp() {
   try {
-    const [cfgRes, lnkRes] = await Promise.all([
-      fetch(`${SUPABASE_URL}/rest/v1/config?select=*`, { headers: SB_HEADERS }),
-      fetch(`${SUPABASE_URL}/rest/v1/links?select=*&order=sort_order`, { headers: SB_HEADERS })
-    ]);
-    if (!cfgRes.ok && !lnkRes.ok) throw new Error('HTTP ' + cfgRes.status);
-    if (cfgRes.ok) {
-      const configRows = await cfgRes.json();
-      configRows.forEach(({ key, value }) => {
+    const res = await fetch(`${PORTAL_API}?action=load`);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const { config, links } = await res.json();
+    if (config) {
+      config.forEach(({ key, value }) => {
         if (key === 'orgName') cfg.orgName = value;
         if (key === 'adminPw') cfg.adminPw = value;
         if (key === 'fontKey') cfg.fontKey = value;
       });
     }
-    if (lnkRes.ok) {
-      const links = await lnkRes.json();
-      if (links && links.length > 0) cfg.links = links;
-    }
+    if (links && links.length > 0) cfg.links = links;
     saveCfg();
   } catch (e) {
     console.warn('Supabase 연결 실패 — 로컬 캐시 사용:', e.message);
