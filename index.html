@@ -220,7 +220,8 @@ button { font-family: var(--font); cursor: pointer; border: none; background: no
 }
 .label-badge {
   display: inline-block; padding: 5px 2px;
-  font-size: 13px; font-weight: 700;
+  font-family: var(--cat-font, var(--font));
+  font-size: var(--cat-size, 13px); font-weight: 700;
   color: #0B3654;
   letter-spacing: .03em; white-space: nowrap; line-height: 1.5;
 }
@@ -239,8 +240,8 @@ button { font-family: var(--font); cursor: pointer; border: none; background: no
   display: inline-flex; align-items: center; gap: 5px;
   padding: 7px 16px; border-radius: 999px;
   border: 1.5px solid var(--divider);
-  background: var(--surface-raised); font-family: var(--font);
-  font-size: 13px; font-weight: 500; color: var(--text);
+  background: var(--surface-raised); font-family: var(--link-font, var(--font));
+  font-size: var(--link-size, 13px); font-weight: 500; color: var(--text);
   box-shadow: 0 1px 3px rgba(0,0,0,.06);
   transition: border-color .2s, color .2s, background .2s,
               transform .2s cubic-bezier(.34,1.56,.64,1),
@@ -589,32 +590,6 @@ button { font-family: var(--font); cursor: pointer; border: none; background: no
           <option value="coming-soon">준비중 (테두리)</option>
         </select>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-        <div class="form-group" style="margin:0">
-          <label class="form-label">폰트 (선택)</label>
-          <select class="form-select" id="lFont">
-            <option value="">기본값</option>
-            <option value="Montserrat">Montserrat</option>
-            <option value="Noto Sans KR">Noto Sans KR</option>
-            <option value="Nanum Gothic">나눔고딕</option>
-            <option value="Nanum Myeongjo">나눔명조</option>
-            <option value="IBM Plex Sans KR">IBM Plex</option>
-            <option value="Gowun Dodum">고운돋움</option>
-            <option value="Do Hyeon">도현</option>
-            <option value="Black Han Sans">블랙한산스</option>
-          </select>
-        </div>
-        <div class="form-group" style="margin:0">
-          <label class="form-label">글자 크기 (선택)</label>
-          <select class="form-select" id="lSize">
-            <option value="">기본값</option>
-            <option value="11px">소 (11px)</option>
-            <option value="13px">중 (13px)</option>
-            <option value="15px">대 (15px)</option>
-            <option value="18px">특대 (18px)</option>
-          </select>
-        </div>
-      </div>
       <div class="modal-actions">
         <button class="btn btn-sm" type="submit">저장</button>
         <button class="btn-text" type="button" onclick="closeLinkModal()">취소</button>
@@ -694,6 +669,8 @@ const DEFAULT_CFG = {
   logo: null,
   bgLogo: null,
   fontKey: 'Montserrat',
+  catFont: null, catSize: null,
+  linkFont: null, linkSize: null,
   links: DEFAULT_LINKS,
 };
 
@@ -775,18 +752,7 @@ function renderPortal() {
 
   applyBgLogo(cfg.bgLogo);
 
-  // 링크별 커스텀 폰트 동적 로드
-  [...new Set(cfg.links.map(l => l.link_font).filter(f => f && f !== 'Montserrat' && f !== 'Noto Sans KR'))].forEach(fontId => {
-    const fd = FONTS.find(f => f.id === fontId);
-    if (!fd) return;
-    const lid = 'lf_' + fontId.replace(/\s+/g, '_');
-    if (!document.getElementById(lid)) {
-      const lnk = document.createElement('link');
-      lnk.id = lid; lnk.rel = 'stylesheet';
-      lnk.href = `https://fonts.googleapis.com/css2?family=${fd.url}&display=swap`;
-      document.head.appendChild(lnk);
-    }
-  });
+  applyTypography();
 
   // 링크 테이블
   const groups  = toGroups(cfg.links);
@@ -811,16 +777,12 @@ function toGroups(links) {
 
 function pillHTML(item) {
   const cls = `pill ${item.status || 'active'}`;
-  const styleParts = [];
-  if (item.link_font) styleParts.push(`font-family:'${item.link_font}',sans-serif`);
-  if (item.link_size) styleParts.push(`font-size:${item.link_size}`);
-  const styleAttr = styleParts.length ? ` style="${styleParts.join(';')}"` : '';
-  if (item.status === 'disabled') return `<span class="${cls}"${styleAttr}>${item.name}</span>`;
+  if (item.status === 'disabled') return `<span class="${cls}">${item.name}</span>`;
   const isExt = item.url && item.url !== '#';
   const href  = isExt ? item.url : 'javascript:void(0)';
   const attrs = isExt ? ' target="_blank" rel="noopener noreferrer"' : '';
   const click = isExt ? '' : ` onclick="showToast('URL이 설정되지 않았습니다.')"`;
-  return `<a class="${cls}" href="${href}"${attrs}${click}${styleAttr}>${item.name}</a>`;
+  return `<a class="${cls}" href="${href}"${attrs}${click}>${item.name}</a>`;
 }
 
 /* ===================================================
@@ -987,6 +949,54 @@ function renderSettings() {
       <p class="settings-hint" style="margin-top:8px">흰 배경 PNG 또는 SVG 권장 / 최대 2MB</p>
     </div>
 
+    <!-- 칼럼 폰트/크기 -->
+    <div class="settings-card">
+      <h3 class="settings-card-title">칼럼별 폰트 · 크기</h3>
+      <p class="settings-hint" style="margin-bottom:14px">왼쪽(카테고리)과 오른쪽(링크명) 각각 일괄 적용됩니다</p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div>
+          <p style="font-size:12px;font-weight:700;color:var(--sub);margin-bottom:8px">왼쪽 — 카테고리</p>
+          <div class="form-group" style="margin-bottom:8px">
+            <label class="form-label">폰트</label>
+            <select class="form-select" id="sCatFont" onchange="saveColStyle('catFont',this.value)">
+              <option value="">기본값</option>
+              ${FONTS.map(f=>`<option value="${f.id}" ${cfg.catFont===f.id?'selected':''}>${f.label}</option>`).join('')}
+            </select>
+          </div>
+          <div class="form-group" style="margin:0">
+            <label class="form-label">크기</label>
+            <select class="form-select" id="sCatSize" onchange="saveColStyle('catSize',this.value)">
+              <option value="">기본값</option>
+              <option value="11px" ${cfg.catSize==='11px'?'selected':''}>소 (11px)</option>
+              <option value="13px" ${cfg.catSize==='13px'?'selected':''}>중 (13px)</option>
+              <option value="15px" ${cfg.catSize==='15px'?'selected':''}>대 (15px)</option>
+              <option value="18px" ${cfg.catSize==='18px'?'selected':''}>특대 (18px)</option>
+            </select>
+          </div>
+        </div>
+        <div>
+          <p style="font-size:12px;font-weight:700;color:var(--sub);margin-bottom:8px">오른쪽 — 링크명</p>
+          <div class="form-group" style="margin-bottom:8px">
+            <label class="form-label">폰트</label>
+            <select class="form-select" id="sLinkFont" onchange="saveColStyle('linkFont',this.value)">
+              <option value="">기본값</option>
+              ${FONTS.map(f=>`<option value="${f.id}" ${cfg.linkFont===f.id?'selected':''}>${f.label}</option>`).join('')}
+            </select>
+          </div>
+          <div class="form-group" style="margin:0">
+            <label class="form-label">크기</label>
+            <select class="form-select" id="sLinkSize" onchange="saveColStyle('linkSize',this.value)">
+              <option value="">기본값</option>
+              <option value="11px" ${cfg.linkSize==='11px'?'selected':''}>소 (11px)</option>
+              <option value="13px" ${cfg.linkSize==='13px'?'selected':''}>중 (13px)</option>
+              <option value="15px" ${cfg.linkSize==='15px'?'selected':''}>대 (15px)</option>
+              <option value="18px" ${cfg.linkSize==='18px'?'selected':''}>특대 (18px)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- 비밀번호 -->
     <div class="settings-card">
       <h3 class="settings-card-title">관리자 비밀번호 변경</h3>
@@ -1077,6 +1087,37 @@ async function applyFont(fontId) {
   );
 }
 
+function loadFont(fontId) {
+  if (!fontId || fontId === 'Montserrat' || fontId === 'Noto Sans KR') return;
+  const font = FONTS.find(f => f.id === fontId);
+  if (!font) return;
+  const lid = 'cf_' + fontId.replace(/\s+/g, '_');
+  if (document.getElementById(lid)) return;
+  const lnk = document.createElement('link');
+  lnk.id = lid; lnk.rel = 'stylesheet';
+  lnk.href = `https://fonts.googleapis.com/css2?family=${font.url}&display=swap`;
+  document.head.appendChild(lnk);
+}
+
+function applyTypography() {
+  const r = document.documentElement.style;
+  if (cfg.catFont)  { loadFont(cfg.catFont);  r.setProperty('--cat-font', `'${cfg.catFont}',sans-serif`); }
+  else              { r.removeProperty('--cat-font'); }
+  if (cfg.catSize)  { r.setProperty('--cat-size', cfg.catSize); }
+  else              { r.removeProperty('--cat-size'); }
+  if (cfg.linkFont) { loadFont(cfg.linkFont); r.setProperty('--link-font', `'${cfg.linkFont}',sans-serif`); }
+  else              { r.removeProperty('--link-font'); }
+  if (cfg.linkSize) { r.setProperty('--link-size', cfg.linkSize); }
+  else              { r.removeProperty('--link-size'); }
+}
+
+async function saveColStyle(field, value) {
+  cfg[field] = value || null;
+  saveCfg();
+  applyTypography();
+  await sbSetConfig(field, value || '');
+}
+
 async function removeBgLogo() {
   cfg.bgLogo = null; saveCfg();
   renderPortal(); renderSettings();
@@ -1133,8 +1174,6 @@ function openAddLink() {
   document.getElementById('linkModalTitle').textContent = '링크 추가';
   ['lCat','lName','lUrl'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('lStatus').value = 'active';
-  document.getElementById('lFont').value   = '';
-  document.getElementById('lSize').value   = '';
   refreshCatList();
   openModal('linkModal');
   setTimeout(() => document.getElementById('lCat').focus(), 60);
@@ -1149,8 +1188,6 @@ function openEditLink(id) {
   document.getElementById('lName').value   = link.name;
   document.getElementById('lUrl').value    = (link.url === '#' ? '' : link.url) || '';
   document.getElementById('lStatus').value = link.status || 'active';
-  document.getElementById('lFont').value   = link.link_font || '';
-  document.getElementById('lSize').value   = link.link_size || '';
   refreshCatList();
   openModal('linkModal');
 }
@@ -1166,10 +1203,8 @@ async function saveLink(e) {
   e.preventDefault();
   const cat      = document.getElementById('lCat').value.trim();
   const name     = document.getElementById('lName').value.trim();
-  const url      = document.getElementById('lUrl').value.trim() || '#';
-  const status   = document.getElementById('lStatus').value;
-  const linkFont = document.getElementById('lFont').value || null;
-  const linkSize = document.getElementById('lSize').value || null;
+  const url    = document.getElementById('lUrl').value.trim() || '#';
+  const status = document.getElementById('lStatus').value;
 
   if (!cat)  { showToast('카테고리를 입력해주세요.'); return; }
   if (!name) { showToast('서비스 이름을 입력해주세요.'); return; }
@@ -1177,12 +1212,12 @@ async function saveLink(e) {
   if (editingId) {
     const idx = cfg.links.findIndex(l => String(l.id) === String(editingId));
     if (idx > -1) {
-      cfg.links[idx] = { ...cfg.links[idx], cat, name, url, status, link_font: linkFont, link_size: linkSize };
+      cfg.links[idx] = { ...cfg.links[idx], cat, name, url, status };
       await sbSaveLink(cfg.links[idx], idx);
     }
     showToast('링크가 수정되었습니다.');
   } else {
-    const newLink = { id: 'u' + Date.now(), cat, name, url, status, link_font: linkFont, link_size: linkSize };
+    const newLink = { id: 'u' + Date.now(), cat, name, url, status };
     cfg.links.push(newLink);
     await sbSaveLink(newLink, cfg.links.length - 1);
     showToast('링크가 추가되었습니다.');
@@ -1262,11 +1297,15 @@ async function initApp() {
     const { config, links } = await res.json();
     if (config) {
       config.forEach(({ key, value }) => {
-        if (key === 'orgName')    cfg.orgName = value;
-        if (key === 'adminPw')    cfg.adminPw = value;
-        if (key === 'fontKey')    cfg.fontKey = value;
-        if (key === 'headerLogo') cfg.logo    = value || null;
-        if (key === 'bgLogo')     cfg.bgLogo  = value || null;
+        if (key === 'orgName')    cfg.orgName  = value;
+        if (key === 'adminPw')    cfg.adminPw  = value;
+        if (key === 'fontKey')    cfg.fontKey  = value;
+        if (key === 'headerLogo') cfg.logo     = value || null;
+        if (key === 'bgLogo')     cfg.bgLogo   = value || null;
+        if (key === 'catFont')    cfg.catFont  = value || null;
+        if (key === 'catSize')    cfg.catSize  = value || null;
+        if (key === 'linkFont')   cfg.linkFont = value || null;
+        if (key === 'linkSize')   cfg.linkSize = value || null;
       });
     }
     if (links && links.length > 0) cfg.links = links;
@@ -1277,6 +1316,7 @@ async function initApp() {
   }
   document.getElementById('loadingOverlay').style.display = 'none';
   if (cfg.fontKey && cfg.fontKey !== 'Montserrat') await applyFont(cfg.fontKey);
+  applyTypography();
   renderPortal();
 }
 
