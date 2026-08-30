@@ -1056,10 +1056,10 @@ function applyBgLogo(src) {
   // { l: left%, t: top%, w: 너비vw, op: opacity, tx: transform translate }
   const spots = [
     { l: 50, t: 50, w: 34, op: .14, tx: '-50%,-50%' },  // 대형 — 중앙
-    { l:  6, t:  6, w: 12, op: .07, tx: '0,0'        },  // 소형 — 좌상
-    { l: 82, t:  5, w: 11, op: .06, tx: '-50%,0'     },  // 소형 — 우상
-    { l:  5, t: 72, w: 12, op: .07, tx: '0,-50%'     },  // 소형 — 좌하
-    { l: 84, t: 72, w: 11, op: .06, tx: '-50%,-50%'  },  // 소형 — 우하
+    { l:  6, t:  6, w: 12, op: .14, tx: '0,0'        },  // 소형 — 좌상
+    { l: 82, t:  5, w: 11, op: .14, tx: '-50%,0'     },  // 소형 — 우상
+    { l:  5, t: 72, w: 12, op: .14, tx: '0,-50%'     },  // 소형 — 좌하
+    { l: 84, t: 72, w: 11, op: .14, tx: '-50%,-50%'  },  // 소형 — 우하
   ];
   spots.forEach(s => {
     const img = document.createElement('img');
