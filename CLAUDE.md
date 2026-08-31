@@ -1,11 +1,24 @@
-# KWS 업무 포털 — 프로젝트 규칙
+# KWS 업무 포털 — 프로젝트 전용 규칙
 
-## 문서 파일 저장 규칙
+> 문서 저장·GitHub 연동 등 공통 규칙은 전역 CLAUDE.md 적용
 
-문서 파일(인수인계, 매뉴얼, 보고서 등)을 생성할 때 아래 순서로 진행한다:
+## 프로젝트 정보
 
-1. **파일명 형식**: `제목_문서종류_YYYYMMDD.html` (예: `KWS업무포털_인수인계문서_20260830.html`)
-2. **저장 위치**: 현재 프로젝트 폴더 (CLAUDE.md가 있는 폴더)
-3. **형식**: HTML만 저장 (PDF는 각 PC에서 브라우저로 열어 Ctrl+P → PDF로 저장)
-4. **GitHub 업로드**: 생성 후 자동으로 `git add → git commit → git push` 까지 완료
-5. **완료 안내**: push 후 사용자에게 "PC 2, 3에서 git pull 후 브라우저에서 열어 Ctrl+P로 PDF 저장하세요" 안내
+- **서비스**: KWS 업무 포털 (대한사회복지회 사내 링크 포털)
+- **포털 주소**: https://kwsdeveloper.github.io/kws-project
+- **GitHub 저장소**: https://github.com/kwsDeveloper/kws-project
+- **로컬 경로 (PC 1)**: C:\ClaudeProjects\kws-portal\
+- **주요 파일**: index.html (단일 HTML SPA)
+
+## 기술 구성
+
+- **호스팅**: GitHub Pages (master 브랜치 자동 배포)
+- **데이터 저장**: Supabase PostgreSQL
+- **API**: Supabase Edge Function (portal-api)
+- **Supabase 프로젝트 Ref**: czrdvknzbkmryvnjyiki
+
+## 코드 수정 규칙
+
+- index.html 수정 후 반드시 `git push`까지 완료
+- Supabase Service Role 키는 절대 index.html에 포함하지 않음
+- 민감 정보(비밀번호, API 키)는 답변에 재출력하지 않음
