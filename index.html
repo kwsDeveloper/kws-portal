@@ -710,6 +710,19 @@ async function sbSaveLink(link, sortOrder) {
   } catch(e) { showToast('저장 오류: ' + e.message); return false; }
 }
 
+async function syncAllLinks(btn) {
+  const links = cfg.links;
+  if (links.length === 0) { showToast('동기화할 링크가 없습니다.'); return; }
+  if (btn) { btn.disabled = true; btn.textContent = '동기화 중...'; }
+  let ok = 0;
+  for (let i = 0; i < links.length; i++) {
+    const success = await sbSaveLink(links[i], i);
+    if (success) ok++;
+  }
+  if (btn) { btn.disabled = false; btn.innerHTML = '전체 동기화'; renderLinkMgr(); }
+  showToast(ok === links.length ? `전체 ${ok}개 링크를 Supabase에 동기화했습니다.` : `${ok}/${links.length}개 동기화 완료 (일부 실패)`);
+}
+
 async function sbDeleteLink(id) {
   try {
     const res = await fetch(`${PORTAL_API}?action=deleteLink`, {
@@ -846,12 +859,21 @@ function renderLinkMgr() {
         링크 목록
         <span class="count-badge">${links.length}</span>
       </h2>
-      <button class="btn btn-sm" onclick="openAddLink()">
-        <svg class="icon" viewBox="0 0 24 24" width="14" height="14">
-          <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-        </svg>
-        링크 추가
-      </button>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-sm" style="background:var(--surface);color:var(--primary);border:1.5px solid var(--primary);box-shadow:none;" onclick="syncAllLinks(this)">
+          <svg class="icon" viewBox="0 0 24 24" width="14" height="14">
+            <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
+            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+          </svg>
+          전체 동기화
+        </button>
+        <button class="btn btn-sm" onclick="openAddLink()">
+          <svg class="icon" viewBox="0 0 24 24" width="14" height="14">
+            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+          링크 추가
+        </button>
+      </div>
     </div>
     ${links.length === 0
       ? '<p class="admin-empty">등록된 링크가 없습니다. 위 버튼으로 추가해주세요.</p>'
