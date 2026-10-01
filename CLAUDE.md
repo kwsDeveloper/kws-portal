@@ -5,8 +5,8 @@
 ## 프로젝트 정보
 
 - **서비스**: KWS 업무 포털 (대한사회복지회 사내 링크 포털)
-- **포털 주소**: https://kwsdeveloper.github.io/kws-project
-- **GitHub 저장소**: https://github.com/kwsDeveloper/kws-project
+- **포털 주소**: https://kwsdeveloper.github.io/kws-portal
+- **GitHub 저장소**: https://github.com/kwsDeveloper/kws-portal
 - **로컬 경로 (PC 1)**: C:\ClaudeProjects\kws-portal\
 - **주요 파일**: index.html (단일 HTML SPA)
 
